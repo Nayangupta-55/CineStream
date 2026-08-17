@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cine-Stream — Media Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c0e13;
+    --surface: #14171f;
+    --surface-2: #1b1f29;
+    --edge: #2a2f3b;
+    --marquee: #e8b34a;
+    --marquee-dim: #a67f34;
+    --reel-red: #c1443c;
+    --text: #edeef0;
+    --text-dim: #8b93a3;
+    --success: #5fb98a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+  }
+  ::selection{ background: var(--marquee); color:#1a1300; }
+
+  .sprocket-row{
+    display:flex;
+    gap:10px;
+    padding: 6px 20px;
+    background: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 4px);
+    height: 14px;
+    opacity:.5;
+  }
+  .sprocket-row.top{ border-bottom:1px solid var(--edge); }
+  .sprocket-row.bottom{ border-top:1px solid var(--edge); }
+
+  header{
+    position: sticky; top:0; z-index: 50;
+    background: linear-gradient(180deg, #0f1219 0%, #0c0e13 100%);
+    border-bottom: 1px solid var(--edge);
+  }
+  .marquee-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 28px; gap: 20px; flex-wrap: wrap;
+  }
+  .brand{
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 34px;
+    letter-spacing: 2px;
+    color: var(--marquee);
+    text-shadow: 0 0 18px rgba(232,179,74,.35);
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--reel-red); box-shadow: 0 0 10px var(--reel-red);}
+  nav.tabs{ display:flex; gap: 6px; background: var(--surface); padding:4px; border-radius: 999px; border:1px solid var(--edge); }
+  nav.tabs button{
+    font-family:'Inter'; font-weight:600; font-size: 13px;
+    background:transparent; color: var(--text-dim); border:none;
+    padding: 8px 18px; border-radius: 999px; cursor:pointer;
+    transition: all .2s ease;
+  }
+  nav.tabs button.active{ background: var(--marquee); color:#1a1300; }
+  nav.tabs button:hover:not(.active){ color: var(--text); }
+
+  .search-row{
+    display:flex; gap:12px; padding: 0 28px 18px; flex-wrap:wrap;
+  }
+  .search-box{
+    flex:1; min-width:220px;
+    position:relative;
+  }
+  .search-box input{
+    width:100%;
+    background: var(--surface);
+    border:1px solid var(--edge);
+    color: var(--text);
+    padding: 12px 16px 12px 40px;
+    border-radius: 10px;
+    font-size:14px;
+    font-family:'Inter';
+    outline:none;
+    transition: border-color .2s;
+  }
+  .search-box input:focus{ border-color: var(--marquee); }
+  .search-box svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.5; }
+  .search-status{ font-size:11px; font-family:'JetBrains Mono'; color: var(--text-dim); position:absolute; right:12px; top:50%; transform:translateY(-50%);}
+
+  .mood-panel{
+    margin: 0 28px 20px;
+    background: linear-gradient(135deg, rgba(193,68,60,.08), rgba(232,179,74,.06));
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    padding: 16px 20px;
+  }
+  .mood-title{
+    font-family:'Bebas Neue'; letter-spacing:1px; font-size:18px; color: var(--marquee);
+    margin: 0 0 8px 0;
+  }
+  .mood-sub{ font-size:12.5px; color: var(--text-dim); margin: 0 0 12px 0; }
+  .mood-form{ display:flex; gap:10px; flex-wrap:wrap;}
+  .mood-form input{
+    flex:1; min-width:220px;
+    background: var(--surface);
+    border:1px solid var(--edge);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size:13.5px;
+    outline:none;
+  }
+  .mood-form input:focus{ border-color: var(--reel-red); }
+  .mood-form button{
+    background: var(--reel-red);
+    color:#fff; border:none; border-radius:8px;
+    padding: 10px 20px; font-weight:600; font-size:13.5px; cursor:pointer;
+    transition: filter .2s;
+  }
+  .mood-form button:hover{ filter: brightness(1.12); }
+  .mood-form button:disabled{ opacity:.5; cursor:not-allowed; }
+  .mood-result{ margin-top: 14px; }
+  .mood-note{ font-size: 12px; color: var(--text-dim); margin-top:8px; }
+
+  main{ padding: 8px 28px 60px; max-width: 1400px; margin: 0 auto; }
+
+  .section-label{
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color: var(--text-dim); margin: 20px 0 14px; display:flex; align-items:center; gap:10px;
+  }
+  .section-label::after{ content:''; flex:1; height:1px; background: var(--edge); }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 18px;
+  }
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    overflow:hidden;
+    position:relative;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .card:hover{
+    transform: translateY(-4px);
+    border-color: var(--marquee-dim);
+    box-shadow: 0 14px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(232,179,74,.15);
+  }
+  .poster-wrap{ position:relative; aspect-ratio: 2/3; background: var(--surface-2); overflow:hidden;}
+  .poster-wrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .poster-wrap .no-img{
+    display:flex; align-items:center; justify-content:center; height:100%;
+    color: var(--text-dim); font-size:12px; text-align:center; padding: 10px;
+  }
+  .rating-badge{
+    position:absolute; top:8px; left:8px;
+    background: rgba(12,14,19,.85); border:1px solid var(--edge);
+    color: var(--marquee); font-family:'JetBrains Mono'; font-weight:600; font-size:12px;
+    padding: 3px 7px; border-radius: 6px; backdrop-filter: blur(4px);
+  }
+  .fav-btn{
+    position:absolute; top:8px; right:8px;
+    width:30px; height:30px; border-radius:50%;
+    background: rgba(12,14,19,.85); border:1px solid var(--edge);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: transform .15s, background .2s;
+  }
+  .fav-btn:hover{ transform: scale(1.1); }
+  .fav-btn.active{ background: var(--reel-red); border-color: var(--reel-red); }
+  .fav-btn svg{ width:15px; height:15px; }
+  .card-body{ padding: 10px 12px 12px; }
+  .card-title{
+    font-size: 13.5px; font-weight:600; line-height:1.3;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    margin-bottom: 4px;
+  }
+  .card-year{ font-family:'JetBrains Mono'; font-size:11.5px; color: var(--text-dim); }
+
+  .empty-state{
+    text-align:center; padding: 60px 20px; color: var(--text-dim);
+  }
+  .empty-state h3{ font-family:'Bebas Neue'; font-size:24px; letter-spacing:1px; color: var(--text); margin-bottom:8px;}
+
+  .sentinel{ height: 40px; }
+  .loader{
+    display:flex; justify-content:center; align-items:center; gap:8px;
+    padding: 24px; color: var(--text-dim); font-family:'JetBrains Mono'; font-size:12px;
+  }
+  .spinner{
+    width:16px; height:16px; border-radius:50%;
+    border: 2px solid var(--edge); border-top-color: var(--marquee);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .setup-screen{
+    max-width: 480px; margin: 10vh auto; padding: 32px;
+    background: var(--surface); border:1px solid var(--edge); border-radius: 16px;
+    text-align:center;
+  }
+  .setup-screen h2{ font-family:'Bebas Neue'; font-size:28px; letter-spacing:1px; color: var(--marquee); margin-bottom:6px;}
+  .setup-screen p{ color: var(--text-dim); font-size: 13.5px; line-height:1.6; margin-bottom: 18px; }
+  .setup-screen a{ color: var(--marquee); }
+  .setup-screen input{
+    width:100%; background: var(--surface-2); border:1px solid var(--edge); color:var(--text);
+    padding: 11px 14px; border-radius:8px; font-family:'JetBrains Mono'; font-size:13px; margin-bottom:12px; outline:none;
+  }
+  .setup-screen input:focus{ border-color: var(--marquee); }
+  .setup-screen button{
+    width:100%; background: var(--marquee); color:#1a1300; border:none; border-radius:8px;
+    padding: 12px; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .setup-error{ color: var(--reel-red); font-size:12.5px; margin-top:10px; min-height:16px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform: translateX(-50%);
+    background: var(--surface-2); border:1px solid var(--edge); color: var(--text);
+    padding: 10px 18px; border-radius: 8px; font-size:13px; z-index: 200;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    opacity:0; pointer-events:none; transition: opacity .25s, transform .25s;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-6px); }
+
+  @media (max-width: 560px){
+    .marquee-bar{ padding: 12px 16px; }
+    .search-row, main, .mood-panel{ padding-left:16px; padding-right:16px; }
+    .brand{ font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+(function(){
+
+  var TMDB_IMG = 'https://image.tmdb.org/t/p/w342';
+  var KEY_TMDB = 'tmdb_api_key';
+  var KEY_FAVORITES = 'favorites';
+
+  var state = {
+    apiKey: null,
+    view: (location.hash === '#/favorites') ? 'favorites' : 'browse',
+    query: '',
+    movies: [],
+    page: 0,
+    totalPages: 1,
+    loading: false,
+    favorites: {},
+    moodQuery: '',
+    moodLoading: false,
+    moodResult: null,
+    moodError: null,
+    booted: false
+  };
+
+  var app = document.getElementById('app');
+  var observer = null;
+
+  async function storageGet(key){
+    try{
+      var res = await window.storage.get(key, false);
+      return res ? JSON.parse(res.value) : null;
+    }catch(e){
+      return null;
+    }
+  }
+  async function storageSet(key, value){
+    try{
+      await window.storage.set(key, JSON.stringify(value), false);
+    }catch(e){
+      console.error('storage set failed', e);
+    }
+  }
+
+  function debounce(fn, delay){
+    var t = null;
+    return function(){
+      var args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function(){ fn.apply(null, args); }, delay);
+    };
+  }
+
+  function escapeHtml(str){
+    var d = document.createElement('div');
+    d.textContent = str == null ? '' : str;
+    return d.innerHTML;
+  }
+
+  function showToast(msg){
+    var el = document.getElementById('toast');
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ el.classList.remove('show'); }, 1800);
+  }
+
+  async function tmdbFetch(query, page){
+    var base = query
+      ? 'https://api.themoviedb.org/3/search/movie'
+      : 'https://api.themoviedb.org/3/movie/popular';
+    var url = base + '?api_key=' + encodeURIComponent(state.apiKey)
+      + '&page=' + page
+      + (query ? '&query=' + encodeURIComponent(query) : '');
+    var res = await fetch(url);
+    if(!res.ok){
+      var body = await res.json().catch(function(){ return {}; });
+      throw new Error(body.status_message || ('TMDB request failed (' + res.status + ')'));
+    }
+    return res.json();
+  }
+
+  async function loadPage(reset){
+    if(state.loading) return;
+    if(!reset && state.page >= state.totalPages) return;
+    state.loading = true;
+    render();
+    try{
+      var nextPage = reset ? 1 : state.page + 1;
+      var data = await tmdbFetch(state.query, nextPage);
+      state.page = data.page;
+      state.totalPages = data.total_pages || 1;
+      var results = data.results || [];
+      state.movies = reset ? results : state.movies.concat(results);
+    }catch(err){
+      showToast(err.message || 'Failed to load movies');
+    }finally{
+      state.loading = false;
+      render();
+      setupObserver();
+    }
+  }
+
+  function setupObserver(){
+    if(observer) observer.disconnect();
+    var sentinel = document.getElementById('sentinel');
+    if(!sentinel) return;
+    observer = new IntersectionObserver(function(entries){
+      if(entries[0].isIntersecting && !state.loading && state.page < state.totalPages){
+        loadPage(false);
+      }
+    }, { rootMargin: '400px' });
+    observer.observe(sentinel);
+  }
+
+  var debouncedSearch = debounce(function(value){
+    state.query = value.trim();
+    loadPage(true);
+  }, 500);
+
+  function isFavorite(id){
+    return !!state.favorites[id];
+  }
+  async function toggleFavorite(movie){
+    if(state.favorites[movie.id]){
+      delete state.favorites[movie.id];
+      showToast('Removed from favorites');
+    }else{
+      state.favorites[movie.id] = movie;
+      showToast('Added to favorites');
+    }
+    render();
+    await storageSet(KEY_FAVORITES, state.favorites);
+  }
+
+  async function runMoodMatch(prompt){
+    if(!prompt.trim()) return;
+    state.moodLoading = true;
+    state.moodError = null;
+    state.moodResult = null;
+    render();
+    try{
+      var sys = 'You are a movie recommendation engine. Given a mood or contextual description, ' +
+        'respond with ONLY a JSON object of the form {"title":"<a single real movie title>"} ' +
+        'and nothing else — no markdown fences, no preamble, no explanation.';
+      var apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          system: sys,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      var data = await apiRes.json();
+      var text = (data.content || []).map(function(b){ return b.text || ''; }).join('\n');
+      var clean = text.replace(/```json|```/g, '').trim();
+      var parsed;
+      try{ parsed = JSON.parse(clean); }
+      catch(e){
+        var m = clean.match(/"title"\s*:\s*"([^"]+)"/);
+        parsed = m ? { title: m[1] } : null;
+      }
+      if(!parsed || !parsed.title) throw new Error('Could not parse a title from the AI response');
+
+      var searchData = await tmdbFetch(parsed.title, 1);
+      var match = (searchData.results || [])[0];
+      if(!match) throw new Error('AI suggested "' + parsed.title + '" but TMDB found no match');
+      state.moodResult = match;
+    }catch(err){
+      state.moodError = err.message || 'Mood match failed';
+    }finally{
+      state.moodLoading = false;
+      render();
+    }
+  }
+
+  function movieCard(m){
+    var year = (m.release_date || '').slice(0,4) || '—';
+    var rating = (typeof m.vote_average === 'number') ? m.vote_average.toFixed(1) : '—';
+    var fav = isFavorite(m.id);
+    var posterHtml = m.poster_path
+      ? '<img src="' + TMDB_IMG + m.poster_path + '" alt="' + escapeHtml(m.title) + ' poster" loading="lazy">'
+      : '<div class="no-img">No poster available</div>';
+    return (
+      '<div class="card" data-id="' + m.id + '">' +
+        '<div class="poster-wrap">' +
+          posterHtml +
+          '<div class="rating-badge">★ ' + rating + '</div>' +
+          '<button class="fav-btn ' + (fav ? 'active' : '') + '" data-fav="' + m.id + '" title="' + (fav ? 'Remove favorite' : 'Add favorite') + '">' +
+            '<svg viewBox="0 0 24 24" fill="' + (fav ? '#fff' : 'none') + '" stroke="' + (fav ? '#fff' : '#edeef0') + '" stroke-width="2"><path d="M12 21s-7.5-4.7-10-9.3C.3 8 2 4 6 4c2 0 3.5 1 4 2 .5-1 2-2 4-2 4 0 5.7 4 4 7.7-2.5 4.6-10 9.3-10 9.3z"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<div class="card-title">' + escapeHtml(m.title) + '</div>' +
+          '<div class="card-year">' + year + '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderBrowse(){
+    var grid = state.movies.length
+      ? '<div class="grid">' + state.movies.map(movieCard).join('') + '</div>'
+      : (state.loading ? '' : '<div class="empty-state"><h3>No results</h3><p>Try a different search term.</p></div>');
+
+    return (
+      '<div class="mood-panel">' +
+        '<div class="mood-title">Mood Matcher</div>' +
+        '<p class="mood-sub">Describe how you feel or what you\'re in the mood for — Claude will pick a title, then we\'ll pull it from TMDB.</p>' +
+        '<form class="mood-form" id="mood-form">' +
+          '<input type="text" id="mood-input" placeholder="e.g. feeling sad but want something action-packed" value="' + escapeHtml(state.moodQuery) + '">' +
+          '<button type="submit" ' + (state.moodLoading ? 'disabled' : '') + '>' + (state.moodLoading ? 'Thinking…' : 'Find a movie') + '</button>' +
+        '</form>' +
+        (state.moodError ? '<p class="mood-note" style="color:var(--reel-red)">' + escapeHtml(state.moodError) + '</p>' : '') +
+        (state.moodResult ? '<div class="mood-result"><div class="grid" style="grid-template-columns:170px;">' + movieCard(state.moodResult) + '</div></div>' : '') +
+      '</div>' +
+      '<div class="section-label">' + (state.query ? 'Search results for "' + escapeHtml(state.query) + '"' : 'Popular right now') + '</div>' +
+      grid +
+      (state.movies.length ? '<div id="sentinel" class="sentinel"></div>' : '') +
+      (state.loading ? '<div class="loader"><div class="spinner"></div> Loading more…</div>' : '')
+    );
+  }
+
+  function renderFavorites(){
+    var list = Object.values(state.favorites);
+    if(!list.length){
+      return '<div class="empty-state"><h3>No favorites yet</h3><p>Tap the heart on any movie card to save it here.</p></div>';
+    }
+    return '<div class="section-label">My Favorites — ' + list.length + '</div><div class="grid">' + list.map(movieCard).join('') + '</div>';
+  }
+
+  function renderSetup(){
+    return (
+      '<div class="setup-screen">' +
+        '<h2>CINE-STREAM</h2>' +
+        '<p>Enter a free TMDB API key to start browsing. Get one at ' +
+        '<a href="https://developer.themoviedb.org" target="_blank" rel="noopener">developer.themoviedb.org</a> ' +
+        '(v3 auth key). If TMDB is unreachable, OMDb at <a href="https://omdbapi.com" target="_blank" rel="noopener">omdbapi.com</a> is a documented fallback, ' +
+        'though this build talks to the TMDB endpoint shape.</p>' +
+        '<input type="text" id="key-input" placeholder="Paste your TMDB API key" autocomplete="off">' +
+        '<button id="key-submit">Launch Cine-Stream</button>' +
+        '<div class="setup-error" id="key-error"></div>' +
+      '</div>'
+    );
+  }
+
+  function render(){
+    if(!state.booted){
+      app.innerHTML = '<div class="loader"><div class="spinner"></div> Starting up…</div>';
+      return;
+    }
+    if(!state.apiKey){
+      app.innerHTML = renderSetup();
+      bindSetup();
+      return;
+    }
+
+    app.innerHTML =
+      '<header>' +
+        '<div class="sprocket-row top"></div>' +
+        '<div class="marquee-bar">' +
+          '<div class="brand"><span class="dot"></span>CINE-STREAM</div>' +
+          '<nav class="tabs">' +
+            '<button data-view="browse" class="' + (state.view === 'browse' ? 'active' : '') + '">Browse</button>' +
+            '<button data-view="favorites" class="' + (state.view === 'favorites' ? 'active' : '') + '">My Favorites (' + Object.keys(state.favorites).length + ')</button>' +
+          '</nav>' +
+        '</div>' +
+        (state.view === 'browse' ?
+          '<div class="search-row"><div class="search-box">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b93a3" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+            '<input type="text" id="search-input" placeholder="Search movies…" value="' + escapeHtml(state.query) + '">' +
+          '</div></div>'
+          : ''
+        ) +
+        '<div class="sprocket-row bottom"></div>' +
+      '</header>' +
+      '<main>' + (state.view === 'browse' ? renderBrowse() : renderFavorites()) + '</main>' +
+      '<div class="toast" id="toast"></div>';
+
+    bindMain();
+    if(state.view === 'browse') setupObserver();
+  }
+
+  function bindSetup(){
+    var btn = document.getElementById('key-submit');
+    var input = document.getElementById('key-input');
+    var err = document.getElementById('key-error');
+    btn.addEventListener('click', async function(){
+      var val = input.value.trim();
+      if(!val){ err.textContent = 'Please paste a TMDB API key.'; return; }
+      btn.disabled = true; btn.textContent = 'Verifying…';
+      state.apiKey = val;
+      try{
+        await tmdbFetch('', 1); 
+        await storageSet(KEY_TMDB, val);
+        render();
+        loadPage(true);
+      }catch(e){
+        state.apiKey = null;
+        err.textContent = e.message || 'That key did not work. Double-check it and try again.';
+        btn.disabled = false; btn.textContent = 'Launch Cine-Stream';
+      }
+    });
+    input.addEventListener('keydown', function(e){ if(e.key === 'Enter') btn.click(); });
+  }
+
+  function bindMain(){
+    var tabs = app.querySelectorAll('nav.tabs button');
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        state.view = btn.getAttribute('data-view');
+        location.hash = state.view === 'favorites' ? '#/favorites' : '#/';
+        render();
+      });
+    });
+
+    var searchInput = document.getElementById('search-input');
+    if(searchInput){
+      searchInput.addEventListener('input', function(e){
+        var val = e.target.value;
+        debouncedSearch(val);
+      });
+    }
+
+    app.querySelectorAll('[data-fav]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-fav');
+        var movie = state.movies.find(function(m){ return String(m.id) === String(id); })
+          || state.favorites[id]
+          || (state.moodResult && String(state.moodResult.id) === String(id) ? state.moodResult : null);
+        if(movie) toggleFavorite(movie);
+      });
+    });
+
+    var moodForm = document.getElementById('mood-form');
+    if(moodForm){
+      moodForm.addEventListener('submit', function(e){
+        e.preventDefault();
+        var val = document.getElementById('mood-input').value;
+        state.moodQuery = val;
+        runMoodMatch(val);
+      });
+    }
+  }
+
+  window.addEventListener('hashchange', function(){
+    state.view = (location.hash === '#/favorites') ? 'favorites' : 'browse';
+    render();
+  });
+
+  async function boot(){
+    var savedKey = await storageGet(KEY_TMDB);
+    var savedFavs = await storageGet(KEY_FAVORITES);
+    state.apiKey = savedKey || null;
+    state.favorites = savedFavs || {};
+    state.booted = true;
+    render();
+    if(state.apiKey) loadPage(true);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
