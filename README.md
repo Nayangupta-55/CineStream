@@ -4,6 +4,9 @@ A Netflix-lite media discovery Single Page Application built with vanilla HTML, 
 
 No build step, no framework, no bundler — a single `cine-stream.html` file you can open in any browser.
 
+## Live Demo
+https://cine-stream-five.vercel.app/
+
 ## Features
 
 ### Phase 1 - Base Architecture & API Consumption
